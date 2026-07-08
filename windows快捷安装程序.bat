@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title 安装程序正在启动中....
+title windows安装程序
 ::弹窗
 
 ::定义安装程序的路径
@@ -37,7 +37,7 @@ echo 正在安装请勿关闭窗口，请稍候...
 echo 准备文件...
 for /L %%i in (1,1,%steps%) do call :runStep %%i
 echo.
-echo 安装完成！版权归属开发者所有俊
+echo 安装完成！开发:俊
 pause
 exit /b
 
@@ -58,8 +58,4 @@ for /L %%j in (!start!,1,!end!) do (
     ping -n 2 127.0.0.1 >nul
 )
 exit /b
-@echo off
-chcp 65001 >nul
-echo 安装程序已安装完成>3秒后本窗口将自动关闭并1秒后自动删除安装程序
-timeout /t 3 >nul
-del "%~f0"
+
