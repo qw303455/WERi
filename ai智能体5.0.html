@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小龙AI交互系统</title>
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:system-ui,-apple-system,sans-serif;
+}
+body{
+    background:#0c0e16;
+    color:#e6e8f0;
+    height:100vh;
+    overflow:hidden;
+}
+
+.intro-screen{
+    position:fixed;
+    inset:0;
+    background:#0c0e16;
+    z-index:99;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:40px;
+    padding:0 30px;
+    transition: opacity 1s ease;
+}
+.intro-screen.fade-out{
+    opacity:0;
+    pointer-events:none;
+}
+
+#particleCanvas{
+    width:360px;
+    height:360px;
+    display:block;
+    background:transparent;
+}
+
+.intro-inner{
+    text-align:center;
+    max-width:720px;
+}
+.intro-content{
+    font-size:18px;
+    line-height:1.8;
+    color:#a8b4d8;
+    white-space:pre-wrap;
+    min-height:220px;
+    text-align:left;
+}
+.skip-btn{
+    margin-top:36px;
+    padding:10px 26px;
+    background:#202840;
+    border:1px solid #425488;
+    color:#c1cdf0;
+    border-radius:8px;
+    cursor:pointer;
+    transition:0.2s;
+}
+.skip-btn:hover{
+    background:#2c385c;
+}
+
+.term-popup{
+    position:absolute;
+    background:#05070c;
+    border:1px solid #337744;
+    border-radius:6px;
+    padding:10px 14px;
+    font-family:"Consolas",monospace;
+    font-size:13px;
+    color:#72d372;
+    min-width:260px;
+    opacity:0;
+    transform:translateY(12px) scale(0.95);
+    transition:0.3s ease;
+    pointer-events:none;
+    z-index:101;
+}
+.term-popup.show{
+    opacity:1;
+    transform:translateY(0) scale(1);
+}
+.term-line{
+    line-height:1.6;
+}
+
+.file-popup{
+    position:absolute;
+    background:#0f1911;
+    border:1px solid #337744;
+    padding:6px 12px;
+    border-radius:4px;
+    color:#87e287;
+    font-family:Consolas;
+    font-size:13px;
+    opacity:0;
+    transform:scale(0.8);
+    transition:0.3s ease;
+    pointer-events:none;
+    z-index:101;
+}
+.file-popup.show{
+    opacity:1;
+    transform:scale(1);
+}
+
+.main-container{
+    height:100vh;
+    display:none;
+    flex-direction:column;
+}
+
+.header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 24px;
+    border-bottom:1px solid #222738;
+    background:#11141f;
+}
+.header h1{
+    font-size:18px;
+    font-weight:500;
+    color:#79a8ff;
+}
+.btn{
+    padding:8px 16px;
+    border-radius:6px;
+    border:none;
+    cursor:pointer;
+    font-size:14px;
+    transition:0.2s;
+}
+.btn-clear{
+    background:#272c3f;
+    color:#cbd5e1;
+}
+.btn-clear:hover{
+    background:#333a52;
+}
+
+.body-wrap{
+    display:flex;
+    flex:1;
+    overflow:hidden;
+}
+
+.control-panel{
+    width:320px;
+    background:linear-gradient(160deg,#101524,#0e111b);
+    border-right:1px solid #252d47;
+    padding:24px 20px;
+    overflow-y:auto;
+}
+.panel-sphere-wrap{
+    width:100%;
+    height:160px;
+    margin-bottom:20px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+#panelSphereCanvas{
+    width:140px;
+    height:140px;
+    display:block;
+    background:transparent;
+}
+.panel-title{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:22px;
+    padding-bottom:12px;
+    border-bottom:1px solid #242c44;
+}
+.panel-title .dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#39ff88;
+    box-shadow:0 0 8px #39ff8880;
+}
+.panel-title h3{
+    color:#94b8f0;
+    font-size:16px;
+    letter-spacing:1px;
+}
+.control-block{
+    margin-bottom:24px;
+}
+.control-block h4{
+    font-size:13px;
+    color:#6478a2;
+    margin-bottom:12px;
+    letter-spacing:0.5px;
+}
+.control-item{
+    padding:11px 14px;
+    background:#171d30;
+    border-radius:8px;
+    margin-bottom:9px;
+    font-size:14px;
+    border:1px solid #262f48;
+}
+.control-item-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:8px;
+}
+.slider-wrap{
+    margin:10px 0 16px;
+}
+.slider-wrap label{
+    font-size:13px;
+    color:#b0bbd8;
+    display:block;
+    margin-bottom:6px;
+}
+input[type="range"]{
+    width:100%;
+}
+input[type="color"]{
+    width:50px;
+    height:28px;
+    border:none;
+    background:transparent;
+    cursor:pointer;
+}
+.switch-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:6px 0;
+}
+.reset-btn{
+    width:100%;
+    padding:9px;
+    margin-top:10px;
+    background:#253459;
+    color:#d0dbff;
+    border:1px solid #344b80;
+    border-radius:6px;
+    cursor:pointer;
+}
+.reset-btn:hover{
+    background:#2e4270;
+}
+
+.chat-wrap{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+}
+.chat-container{
+    flex:1;
+    overflow-y:auto;
+    padding:24px;
+}
+.chat-container::-webkit-scrollbar{
+    width:6px;
+}
+.chat-container::-webkit-scrollbar-thumb{
+    background:#2d3349;
+    border-radius:3px;
+}
+
+.message{
+    max-width:85%;
+    margin-bottom:20px;
+    display:flex;
+}
+.user-message{
+    flex-direction:row-reverse;
+    margin-left:auto;
+}
+.ai-message{
+    margin-right:auto;
+}
+.msg-box{
+    padding:14px 18px;
+    border-radius:12px;
+    line-height:1.6;
+    white-space:pre-wrap;
+}
+.user-message .msg-box{
+    background:#254b99;
+}
+.ai-message .msg-box{
+    background:#1c2233;
+    border:1px solid #2c334b;
+}
+
+.input-wrap{
+    padding:16px 24px;
+    border-top:1px solid #222738;
+    background:#11141f;
+}
+.input-inner{
+    display:flex;
+    gap:12px;
+    align-items:flex-end;
+}
+textarea{
+    flex:1;
+    min-height:52px;
+    max-height:160px;
+    padding:14px;
+    border-radius:10px;
+    background:#1c2233;
+    border:1px solid #2c334b;
+    color:#e6e8f0;
+    font-size:15px;
+    resize:none;
+    outline:none;
+}
+textarea:focus{
+    border-color:#4278d9;
+}
+#sendBtn{
+    height:52px;
+    padding:0 24px;
+    background:#346ed8;
+    color:white;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:500;
+}
+#sendBtn:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+}
+
+.loading-dot span{
+    animation:dot 1.4s infinite;
+    display:inline-block;
+}
+.loading-dot span:nth-child(2){animation-delay:0.2s}
+.loading-dot span:nth-child(3){animation-delay:0.4s}
+@keyframes dot{
+    0%,100%{opacity:0.2}
+    50%{opacity:1}
+}
+
+@media (max-width:900px){
+    #particleCanvas{
+        width:260px;
+        height:260px;
+    }
+    .body-wrap{
+        flex-direction:column;
+    }
+    .control-panel{
+        width:100%;
+        height:auto;
+        max-height:420px;
+        border-right:none;
+        border-bottom:1px solid #222738;
+    }
+    .panel-sphere-wrap{
+        height:120px;
+    }
+    #panelSphereCanvas{
+        width:100px;
+        height:100px;
+    }
+    .message{max-width:92%}
+    .chat-container{padding:16px}
+    .input-wrap{padding:12px 16px}
+}
+</style>
+</head>
+<body>
+
+<div class="intro-screen" id="introScreen">
+    <canvas id="particleCanvas"></canvas>
+    <div class="intro-inner">
+        <div class="intro-content" id="introText"></div>
+        <button class="skip-btn" id="skipBtn">跳过启动流程</button>
+    </div>
+</div>
+
+<div class="main-container" id="mainBox">
+    <div class="header">
+        <h1>小龙AI交互系统】</h1>
+        <button class="btn btn-clear" id="clearBtn">清空会话</button>
+    </div>
+    <div class="body-wrap">
+        <div class="control-panel">
+            <div class="panel-sphere-wrap">
+                <canvas id="panelSphereCanvas"></canvas>
+            </div>
+            <div class="panel-title">
+                <span class="dot"></span>
+                <h3>小龙系统控制面板</h3>
+            </div>
+
+            <div class="control-block">
+                <h4>球体视觉调节</h4>
+                <div class="slider-wrap">
+                    <label>粒子大小 <span id="sizeVal">0.018</span></label>
+                    <input type="range" id="sizeSlider" min="0.010" max="0.035" step="0.001" value="0.018">
+                </div>
+                <div class="slider-wrap">
+                    <label>动画运行速度 <span id="animSpeedVal">1.00</span>x</label>
+                    <input type="range" id="animSpeedSlider" min="0.2" max="2.5" step="0.05" value="1.0">
+                </div>
+                <div class="control-item-row">
+                    <span>粒子颜色</span>
+                    <input type="color" id="colorPicker" value="#79a8ff">
+                </div>
+                <div class="switch-row">
+                    <span>开启脉动动画</span>
+                    <input type="checkbox" id="pulseSwitch" checked>
+                </div>
+            </div>
+
+            <div class="control-block">
+                <h4>交互速度调节</h4>
+                <div class="slider-wrap">
+                    <label>AI响应打字速度 <span id="respSpeedVal">1.00</span>x</label>
+                    <input type="range" id="respSpeedSlider" min="0.3" max="3.0" step="0.05" value="1.0">
+                </div>
+                <button class="reset-btn" id="resetVisual">重置全部参数</button>
+            </div>
+
+            <div class="control-block">
+                <h4>运行模式</h4>
+                <div class="control-item">✅ 完全离线，无网络请求</div>
+                <div class="control-item">内置本地知识库引擎</div>
+                <div class="control-item">支持持续上下文对话</div>
+            </div>
+
+            <div class="control-block">
+                <h4>回答参考</h4>
+                <div class="control-item">你好介绍一下你自己","你是谁</div>
+                <div class="control-item">代码","编程</div>
+                <div class="control-item">天气</div>
+            </div>
+        </div>
+
+        <div class="chat-wrap">
+            <div class="chat-container" id="chatBox"></div>
+            <div class="input-wrap">
+                <div class="input-inner">
+                    <textarea id="promptInput" placeholder="输入消息开始对话，完全离线运行"></textarea>
+                    <button id="sendBtn">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+window.THREE = THREE;
+
+const introScreen = document.getElementById('introScreen');
+const introText = document.getElementById('introText');
+const skipBtn = document.getElementById('skipBtn');
+const mainBox = document.getElementById('mainBox');
+
+const config = {
+    particleSize: 0.018,
+    animSpeed: 1.0,
+    respSpeed: 1.0,
+    particleColor: 0x79a8ff,
+    enablePulse: true
+};
+
+let skipAll = false;
+let messageHistory = [];
+
+const localKnowledgeBase = [
+    {keywords:["你好","hi","hello"], reply:"你好！我是本地离线AI系统小龙，全程不需要联网，有什么可以帮助你的？"},
+    {keywords:["介绍一下你自己","你是谁"], reply:"我是一套完全离线运行的网页AI交互程序，内置粒子可视化界面，所有问答运行在本地浏览器，不会上传任何数据。"},
+    {keywords:["怎么扩充知识库","添加问答"], reply:"找到源码中 localKnowledgeBase 数组，按照示例格式增加关键词与对应回复，保存刷新页面即可生效。"},
+    {keywords:["功能","能力"], reply:"我支持离线关键词问答、连续上下文对话、动态粒子可视化界面。你可以自行扩充知识库实现专属问答。"},
+    {keywords:["帮助","使用方法"], reply:"直接在底部输入框发送消息；Enter发送，Shift+Enter换行；左侧面板可以调节粒子动画样式。"},
+    {keywords:["代码","编程"], reply:"我支持基础代码相关问答，你可以描述想要实现的功能，我会给出参考代码。"},
+    {keywords:["天气"], reply:"离线模式无法获取实时天气数据，联网版本才可以调用天气接口。"},
+    {keywords:["帮我生成一个mc启动器","生成mc启动器","帮我生成mc启动器"], reply:"我无法主动获取mc你可以访问我开发者开发的启动器需要给你网址么。"},
+     {keywords:["需要"], reply:"网址是https://github.com/qw303455。"},
+     
+];
+
+const defaultReplies = [
+    "我暂时没有理解这个问题，你可以换一种说法，或者把内容补充完整。",
+    "这条问题不在本地知识库中，你可以编辑源码扩充问答库。",
+    "请重新描述你的需求，我会尽力为你解答。",
+    "当前离线运行，无法访问互联网信息，请询问知识库内相关内容。"
+];
+
+const introContent = `喵ヾ(≧▽≦*)o你好，欢迎使用小龙AI交互系统。
+
+✅ 运行模式：纯本地离线，零网络请求
+• 动态粒子球体可视化界面
+• 上下文连续对话记忆
+• 可自由扩展本地知识库
+• 断网环境直接运行
+
+使用提示：
+你可以修改源代码中的知识库数组添加问答内容
+准备完成，即将进入交互界面...`;
+
+const triggerCodeIndex = introContent.indexOf("动态粒子");
+const triggerFileIndex = introContent.indexOf("扩展本地知识库");
+
+async function runCodeAnimation(){
+    const term = document.createElement('div');
+    term.className = "term-popup";
+    term.style.left = "12%";
+    term.style.top = "18%";
+    introScreen.appendChild(term);
+    term.classList.add("show");
+
+    const codeLines = [
+        "[LOAD] local_render.core",
+        "[INIT] 离线粒子渲染引擎",
+        "[INFO] WebGL上下文就绪",
+        "[OK] 本地对话模块加载完成"
+    ];
+    let html = "";
+    for(let line of codeLines){
+        html += `<div class="term-line">${line}</div>`;
+        term.innerHTML = html;
+        await new Promise(r=>setTimeout(r,320 / config.respSpeed));
+    }
+    await new Promise(r=>setTimeout(r,1100 / config.respSpeed));
+    term.classList.remove("show");
+    setTimeout(()=>term.remove(),300);
+}
+
+function popFileAnimation(filename){
+    const tip = document.createElement('div');
+    tip.className = "file-popup";
+    tip.innerText = `[LOAD] ${filename}`;
+    const x = 60 + Math.random() * (window.innerWidth * 0.7);
+    const y = 80 + Math.random() * (window.innerHeight * 0.5);
+    tip.style.left = x+"px";
+    tip.style.top = y+"px";
+    introScreen.appendChild(tip);
+    setTimeout(()=>tip.classList.add("show"),50);
+    setTimeout(()=>{
+        tip.classList.remove("show");
+        setTimeout(()=>tip.remove(),300);
+    },1300 / config.respSpeed);
+}
+
+async function typeIntro(){
+    let str = "";
+    let codeTriggered = false;
+    let fileTriggered = false;
+
+    for(let i=0; i<introContent.length; i++){
+        if(skipAll) break;
+        const char = introContent[i];
+        str += char;
+        introText.textContent = str;
+
+        if(!codeTriggered && i >= triggerCodeIndex){
+            codeTriggered = true;
+            runCodeAnimation();
+        }
+        if(!fileTriggered && i >= triggerFileIndex){
+            fileTriggered = true;
+            popFileAnimation("local_knowledge.json");
+            setTimeout(()=>popFileAnimation("render/shader.bin"),450 / config.respSpeed);
+        }
+        await new Promise(r=>setTimeout(r,38 / config.respSpeed));
+    }
+    if(!skipAll){
+        setTimeout(switchToMain,1600 / config.respSpeed);
+    }
+}
+
+function switchToMain(){
+    introScreen.classList.add('fade-out');
+    setTimeout(()=>{
+        introScreen.style.display = "none";
+        mainBox.style.display = "flex";
+        setTimeout(()=>initPanelSphere(),300);
+        bindControlPanel();
+    },1000);
+}
+
+skipBtn.onclick = ()=>{
+    skipAll = true;
+    introScreen.classList.add("fade-out");
+    setTimeout(()=>{
+        introScreen.style.display = "none";
+        mainBox.style.display = "flex";
+        setTimeout(()=>initPanelSphere(),200);
+        bindControlPanel();
+    },400);
+};
+
+let scene, camera, renderer, points, positions, originalPositions;
+let aiIsSpeaking = false;
+let retractProgress = 1;
+let time = 0;
+const canvas = document.getElementById('particleCanvas');
+
+function resizeCanvas(targetCanvas, width, height){
+    targetCanvas.width = width;
+    targetCanvas.height = height;
+}
+
+function initParticleSphere(){
+    resizeCanvas(canvas, 360, 360);
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(60, canvas.width / canvas.height, 0.1, 1000);
+    camera.position.z = 3.8;
+
+    renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true, preserveDrawingBuffer:true});
+    renderer.setSize(canvas.width, canvas.height, false);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+
+    const geo = new THREE.SphereGeometry(0.85, 64, 64);
+    positions = geo.attributes.position.array;
+    originalPositions = new Float32Array(positions);
+
+    const mat = new THREE.PointsMaterial({
+        color:config.particleColor,
+        size:config.particleSize,
+        transparent:true,
+        opacity:0.7
+    });
+    points = new THREE.Points(geo, mat);
+    scene.add(points);
+}
+
+function animateParticles(){
+    requestAnimationFrame(animateParticles);
+    const dt = 0.016 * config.animSpeed;
+    time += dt;
+    points.rotation.y += 0.003 * config.animSpeed;
+
+    const targetProgress = aiIsSpeaking ? 1 : 0;
+    retractProgress += (targetProgress - retractProgress) * 0.025;
+
+    const speakScaleAmp = 0.07 * retractProgress;
+    const speakWobbleAmp = 0.10 * retractProgress;
+    const speakNoiseFactor = 0.15 * retractProgress;
+
+    const sidePush = 1 + Math.sin(time * (aiIsSpeaking ? 5 : 1.2)) * speakScaleAmp;
+    const centerSqueeze = 1 - Math.sin(time * (aiIsSpeaking ? 5 : 1.2)) * speakScaleAmp * 0.45;
+    points.scale.set(sidePush, centerSqueeze, centerSqueeze);
+
+    for(let i=0;i<positions.length;i+=3){
+        const ox = originalPositions[i];
+        const oy = originalPositions[i+1];
+        const oz = originalPositions[i+2];
+        const distance = Math.sqrt(ox*ox + oy*oy + oz*oz);
+
+        const pushSide = Math.sin(time * 3 + ox * 2.5) * speakNoiseFactor;
+        const pushCenter = Math.sin(time * 3 + oy * 2.5) * speakNoiseFactor * 0.35;
+        const wobble = config.enablePulse ? Math.sin(time * (aiIsSpeaking ? 8 : 2)) * speakWobbleAmp : 0;
+
+        positions[i] = ox + pushSide + wobble * (ox / distance);
+        positions[i+1] = oy + pushCenter + wobble * (oy / distance);
+        positions[i+2] = oz + pushCenter + wobble * (oz / distance);
+    }
+
+    points.material.size = config.particleSize;
+    points.material.color.setHex(config.particleColor);
+    points.geometry.attributes.position.needsUpdate = true;
+    renderer.render(scene,camera);
+}
+
+let panelScene, panelCam, panelRender, panelPoints, panelPos, panelOriginPos;
+let panelTime = 0;
+let panelInited = false;
+let isThinking = false;
+let thinkingProgress = 0;
+const panelCanvas = document.getElementById('panelSphereCanvas');
+
+function initPanelSphere(){
+    if(panelInited) return;
+    resizeCanvas(panelCanvas,140,140);
+
+    panelScene = new THREE.Scene();
+    panelCam = new THREE.PerspectiveCamera(60, panelCanvas.width / panelCanvas.height, 0.1, 20);
+    panelCam.position.z = 2.6;
+
+    panelRender = new THREE.WebGLRenderer({canvas:panelCanvas, alpha:true, antialias:true, preserveDrawingBuffer:true});
+    panelRender.setSize(panelCanvas.width, panelCanvas.height, false);
+    panelRender.setPixelRatio(Math.min(window.devicePixelRatio,2));
+
+    const geo = new THREE.SphereGeometry(0.52, 48, 48);
+    panelPos = geo.attributes.position.array;
+    panelOriginPos = new Float32Array(panelPos);
+
+    const mat = new THREE.PointsMaterial({
+        color:config.particleColor,
+        size:config.particleSize,
+        transparent:true,
+        opacity:0.65
+    });
+    panelPoints = new THREE.Points(geo, mat);
+    panelScene.add(panelPoints);
+
+    panelInited = true;
+    animatePanelSphere();
+}
+
+function animatePanelSphere(){
+    requestAnimationFrame(animatePanelSphere);
+    if(!panelInited) return;
+    const dt = 0.016 * config.animSpeed;
+    panelTime += dt;
+
+    const targetThinking = isThinking ? 1 : 0;
+    thinkingProgress += (targetThinking - thinkingProgress) * 0.035;
+
+    panelPoints.rotation.y += (0.0022 + thinkingProgress * 0.008) * config.animSpeed;
+    panelPoints.rotation.x = Math.sin(panelTime * 0.6) * 0.05 * (1 - thinkingProgress);
+
+    for(let i=0;i<panelPos.length;i+=3){
+        const ox = panelOriginPos[i];
+        const oy = panelOriginPos[i+1];
+        const oz = panelOriginPos[i+2];
+
+        const distance = Math.sqrt(ox*ox + oy*oy + oz*oz);
+        const normalX = ox / distance;
+        const normalY = oy / distance;
+        const normalZ = oz / distance;
+
+        const idleNoise = Math.sin(panelTime * 2.4 + ox * 3.2) * 0.025;
+        const angle = panelTime * 2.5 + distance * 10;
+        const thinkOrbit = Math.sin(angle) * 0.08 * thinkingProgress;
+        const thinkPull = -0.06 * thinkingProgress;
+        const pulse = config.enablePulse ? Math.sin(panelTime * 6) * 0.04 * thinkingProgress : 0;
+
+        panelPos[i] = ox + idleNoise + thinkOrbit * normalX + thinkPull * normalX + pulse * normalX;
+        panelPos[i+1] = oy + idleNoise + thinkOrbit * normalY + thinkPull * normalY + pulse * normalY;
+        panelPos[i+2] = oz + idleNoise + thinkOrbit * normalZ + thinkPull * normalZ + pulse * normalZ;
+    }
+
+    panelPoints.material.size = config.particleSize;
+    panelPoints.material.color.setHex(config.particleColor);
+    panelPoints.geometry.attributes.position.needsUpdate = true;
+    panelRender.render(panelScene, panelCam);
+}
+
+function startThinking(){isThinking = true;}
+function stopThinking(){isThinking = false;}
+
+function bindControlPanel(){
+    const sizeSlider = document.getElementById('sizeSlider');
+    const sizeVal = document.getElementById('sizeVal');
+
+    const animSpeedSlider = document.getElementById('animSpeedSlider');
+    const animSpeedVal = document.getElementById('animSpeedVal');
+
+    const respSpeedSlider = document.getElementById('respSpeedSlider');
+    const respSpeedVal = document.getElementById('respSpeedVal');
+
+    const colorPicker = document.getElementById('colorPicker');
+    const pulseSwitch = document.getElementById('pulseSwitch');
+    const resetBtn = document.getElementById('resetVisual');
+
+    sizeSlider.addEventListener('input',()=>{
+        config.particleSize = parseFloat(sizeSlider.value);
+        sizeVal.textContent = config.particleSize.toFixed(3);
+    });
+
+    animSpeedSlider.addEventListener('input',()=>{
+        config.animSpeed = parseFloat(animSpeedSlider.value);
+        animSpeedVal.textContent = config.animSpeed.toFixed(2);
+    });
+
+    respSpeedSlider.addEventListener('input',()=>{
+        config.respSpeed = parseFloat(respSpeedSlider.value);
+        respSpeedVal.textContent = config.respSpeed.toFixed(2);
+    });
+
+    colorPicker.addEventListener('input',()=>{
+        const hex = colorPicker.value.replace("#","0x");
+        config.particleColor = parseInt(hex);
+    });
+
+    pulseSwitch.addEventListener('change',()=>{
+        config.enablePulse = pulseSwitch.checked;
+    });
+
+    resetBtn.addEventListener('click',()=>{
+        config.particleSize = 0.018;
+        config.animSpeed = 1.0;
+        config.respSpeed = 1.0;
+        config.particleColor = 0x79a8ff;
+        config.enablePulse = true;
+
+        sizeSlider.value = 0.018;
+        sizeVal.textContent = "0.018";
+
+        animSpeedSlider.value = 1.0;
+        animSpeedVal.textContent = "1.00";
+
+        respSpeedSlider.value = 1.0;
+        respSpeedVal.textContent = "1.00";
+
+        colorPicker.value = "#79a8ff";
+        pulseSwitch.checked = true;
+    });
+}
+
+const chatBox = document.getElementById('chatBox');
+const promptInput = document.getElementById('promptInput');
+const sendBtn = document.getElementById('sendBtn');
+const clearBtn = document.getElementById('clearBtn');
+
+function scrollBottom(){
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function addMessage(text,isUser){
+    const wrap = document.createElement('div');
+    wrap.className = `message ${isUser?'user-message':'ai-message'}`;
+    const box = document.createElement('div');
+    box.className = 'msg-box';
+    box.textContent = text;
+    wrap.appendChild(box);
+    chatBox.appendChild(wrap);
+    scrollBottom();
+}
+
+function createAiStreamBox(){
+    const wrap = document.createElement('div');
+    wrap.className = 'message ai-message';
+    const box = document.createElement('div');
+    box.className = 'msg-box';
+    wrap.appendChild(box);
+    chatBox.appendChild(wrap);
+    scrollBottom();
+    return box;
+}
+
+function matchLocalAnswer(inputText){
+    const text = inputText.toLowerCase();
+    let bestScore = 0;
+    let bestReply = defaultReplies[Math.floor(Math.random()*defaultReplies.length)];
+
+    for(let item of localKnowledgeBase){
+        let score = 0;
+        for(let kw of item.keywords){
+            if(text.includes(kw.toLowerCase())){
+                score += 1;
+            }
+        }
+        if(score > bestScore){
+            bestScore = score;
+            bestReply = item.reply;
+        }
+    }
+    return bestReply;
+}
+
+async function getLocalReply(userMsg){
+    startThinking();
+    await new Promise(r=>setTimeout(r,400 + Math.random()*500));
+    stopThinking();
+    aiIsSpeaking = true;
+    const answer = matchLocalAnswer(userMsg);
+    messageHistory.push({role:"user",content:userMsg});
+    messageHistory.push({role:"assistant",content:answer});
+    return answer;
+}
+
+async function aiReply(userText){
+    sendBtn.disabled = true;
+    const streamDom = createAiStreamBox();
+    streamDom.innerHTML = `<div class="loading-dot"><span>.</span><span>.</span><span>.</span></div>`;
+
+    const fullText = await getLocalReply(userText);
+    streamDom.innerText = "";
+
+    for(let char of fullText){
+        streamDom.textContent += char;
+        scrollBottom();
+        await new Promise(r=>setTimeout(r,28 / config.respSpeed));
+    }
+    aiIsSpeaking = false;
+    sendBtn.disabled = false;
+}
+
+async function handleSend(){
+    const text = promptInput.value.trim();
+    if(!text || sendBtn.disabled) return;
+    promptInput.value = "";
+    addMessage(text,true);
+    await aiReply(text);
+}
+
+sendBtn.onclick = handleSend;
+promptInput.onkeydown = e=>{
+    if(e.key==='Enter'&&!e.shiftKey){
+        e.preventDefault();
+        handleSend();
+    }
+}
+clearBtn.onclick = ()=>{
+    chatBox.innerHTML="";
+    messageHistory = [];
+};
+
+window.addEventListener("load",()=>{
+    initParticleSphere();
+    animateParticles();
+    typeIntro();
+});
+</script>
+</body>
+</html>
+
