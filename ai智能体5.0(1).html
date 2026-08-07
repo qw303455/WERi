@@ -1,0 +1,1581 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小龙AI交互系统5.0 代码动画增强完整版</title>
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:system-ui,-apple-system,sans-serif;
+}
+body{
+    background:#0c0e16;
+    color:#e6e8f0;
+    height:100vh;
+    overflow:hidden;
+    transition: background 0.5s, color 0.5s;
+}
+/* 新增：前置AI代码启动终端全屏层 */
+.boot-terminal-screen{
+    position:fixed;
+    inset:0;
+    background:#000508;
+    z-index:100;
+    padding:40px;
+    font-family:"Consolas",monospace;
+    overflow:hidden;
+    transition: opacity 1s ease;
+}
+.boot-terminal-screen.fade-out{
+    opacity:0;
+    pointer-events:none;
+}
+.boot-term-header{
+    color:#54b0ff;
+    font-size:20px;
+    margin-bottom:30px;
+    border-bottom:1px solid #1a3350;
+    padding-bottom:10px;
+}
+.boot-term-log-wrap{
+    max-width:1200px;
+    height:calc(100vh - 140px);
+    overflow-y:auto;
+}
+.boot-term-log-wrap::-webkit-scrollbar{
+    width:4px;
+}
+.boot-term-log-wrap::-webkit-scrollbar-thumb{
+    background:#2a4870;
+}
+.boot-log-line{
+    line-height:1.7;
+    font-size:14px;
+    margin:4px 0;
+    white-space:pre-wrap;
+}
+.boot-log-load{color:#72d372;}
+.boot-log-info{color:#79a8ff;}
+.boot-log-warn{color:#ffd050;}
+.boot-log-success{color:#48ffb3; font-weight:bold;}
+.boot-log-error{color:#ff6b6b;}
+.boot-log-task{color:#ff9955;}
+.boot-term-footer{
+    position:absolute;
+    bottom:30px;
+    left:40px;
+    right:40px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+.boot-skip-boot{
+    padding:8px 22px;
+    background:#0f2036;
+    border:1px solid #346ed8;
+    color:#a0c8ff;
+    border-radius:6px;
+    cursor:pointer;
+}
+.boot-skip-boot:hover{
+    background:#173052;
+}
+.boot-boot-progress{
+    width:400px;
+    height:6px;
+    background:#0f2036;
+    border-radius:3px;
+    overflow:hidden;
+}
+.boot-boot-bar{
+    height:100%;
+    background:#54b0ff;
+    width:0%;
+    transition:width 0.08s linear;
+}
+/* 原有样式不变 */
+:root{
+    --bg-main:#0c0e16;
+    --bg-panel:#101524;
+    --bg-header:#11141f;
+    --bg-chat-ai:#1c2233;
+    --bg-chat-user:#254b99;
+    --border-color:#222738;
+    --text-primary:#e6e8f0;
+    --text-secondary:#a8b4d8;
+    --accent:#79a8ff;
+    --green:#39ff88;
+    --warn:#ffd050;
+    --error:#ff6b6b;
+}
+body.theme-sky{
+    --bg-main:#0f1322;
+    --bg-panel:#141a30;
+    --bg-header:#171c33;
+    --accent:#54b0ff;
+}
+body.theme-cyber{
+    --bg-main:#080812;
+    --bg-panel:#0e0e20;
+    --bg-header:#121228;
+    --accent:#ff4fd8;
+    --green:#48ffb3;
+}
+body.theme-mini{
+    --bg-main:#161822;
+    --bg-panel:#1c1f2e;
+    --bg-header:#212436;
+    --accent:#a0b8ff;
+}
+.intro-screen{
+    position:fixed;
+    inset:0;
+    background:var(--bg-main);
+    z-index:99;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:40px;
+    padding:0 30px;
+    transition: opacity 1s ease;
+}
+.intro-screen.fade-out{
+    opacity:0;
+    pointer-events:none;
+}
+#particleCanvas{
+    width:360px;
+    height:360px;
+    display:block;
+    background:transparent;
+}
+.intro-inner{
+    text-align:center;
+    max-width:720px;
+}
+.intro-content{
+    font-size:18px;
+    line-height:1.8;
+    color:var(--text-secondary);
+    white-space:pre-wrap;
+    min-height:260px;
+    text-align:left;
+}
+.load-progress{
+    width:320px;
+    height:6px;
+    background:#1f2640;
+    border-radius:3px;
+    margin-top:12px;
+    overflow:hidden;
+}
+.load-progress-bar{
+    height:100%;
+    background:var(--accent);
+    width:0%;
+    transition:width 0.1s linear;
+}
+.skip-btn{
+    margin-top:36px;
+    padding:10px 26px;
+    background:#202840;
+    border:1px solid #425488;
+    color:#c1cdf0;
+    border-radius:8px;
+    cursor:pointer;
+    transition:0.2s;
+}
+.skip-btn:hover{
+    background:#2c385c;
+}
+/* 终端日志弹窗 多窗口样式 */
+.term-popup{
+    position:absolute;
+    background:#05070c;
+    border:1px solid #337744;
+    border-radius:6px;
+    padding:10px 14px;
+    font-family:"Consolas",monospace;
+    font-size:13px;
+    min-width:280px;
+    opacity:0;
+    transform:translateY(12px) scale(0.95);
+    transition:0.3s ease;
+    pointer-events:none;
+    z-index:101;
+}
+.term-popup.show{
+    opacity:1;
+    transform:translateY(0) scale(1);
+}
+.term-line{
+    line-height:1.6;
+}
+.log-load{color:#72d372;}
+.log-info{color:#79a8ff;}
+.log-warn{color:#ffd050;}
+.log-ok{color:#48ffb3; font-weight:bold;}
+.log-task{color:#ff9955;}
+.file-popup{
+    position:absolute;
+    background:#0f1911;
+    border:1px solid #337744;
+    padding:6px 12px;
+    border-radius:4px;
+    color:#87e287;
+    font-family:Consolas;
+    font-size:13px;
+    opacity:0;
+    transform:scale(0.8);
+    transition:0.3s ease;
+    pointer-events:none;
+    z-index:101;
+}
+.file-popup.show{
+    opacity:1;
+    transform:scale(1);
+}
+.main-container{
+    height:100vh;
+    display:none;
+    flex-direction:column;
+}
+.header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 24px;
+    border-bottom:1px solid var(--border-color);
+    background:var(--bg-header);
+}
+.header h1{
+    font-size:18px;
+    font-weight:500;
+    color:var(--accent);
+}
+.header-btn-group{
+    display:flex;
+    gap:10px;
+}
+.btn{
+    padding:8px 16px;
+    border-radius:6px;
+    border:none;
+    cursor:pointer;
+    font-size:14px;
+    transition:0.2s;
+}
+.btn-clear{
+    background:#272c3f;
+    color:#cbd5e1;
+}
+.btn-clear:hover{
+    background:#333a52;
+}
+.btn-export{
+    background:#234266;
+    color:#d0e4ff;
+}
+.btn-screenshot{
+    background:#1f4b40;
+    color:#c7ffe8;
+}
+.body-wrap{
+    display:flex;
+    flex:1;
+    overflow:hidden;
+}
+.control-panel{
+    width:340px;
+    background:linear-gradient(160deg,var(--bg-panel),#0e111b);
+    border-right:1px solid var(--border-color);
+    padding:24px 20px;
+    overflow-y:auto;
+}
+.panel-sphere-wrap{
+    width:100%;
+    height:160px;
+    margin-bottom:20px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+#panelSphereCanvas{
+    width:140px;
+    height:140px;
+    display:block;
+    background:transparent;
+}
+.panel-title{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:22px;
+    padding-bottom:12px;
+    border-bottom:1px solid var(--border-color);
+}
+.panel-title .dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 8px #39ff8880;
+}
+.panel-title h3{
+    color:#94b8f0;
+    font-size:16px;
+    letter-spacing:1px;
+}
+.control-block{
+    margin-bottom:24px;
+}
+.control-block h4{
+    font-size:13px;
+    color:#6478a2;
+    margin-bottom:12px;
+    letter-spacing:0.5px;
+}
+.control-item{
+    padding:11px 14px;
+    background:#171d30;
+    border-radius:8px;
+    margin-bottom:9px;
+    font-size:14px;
+    border:1px solid #262f48;
+}
+.control-item-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:8px;
+}
+.slider-wrap{
+    margin:10px 0 16px;
+}
+.slider-wrap label{
+    font-size:13px;
+    color:#b0bbd8;
+    display:block;
+    margin-bottom:6px;
+}
+input[type="range"]{
+    width:100%;
+}
+input[type="color"]{
+    width:50px;
+    height:28px;
+    border:none;
+    background:transparent;
+    cursor:pointer;
+}
+.switch-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:6px 0;
+}
+.reset-btn{
+    width:100%;
+    padding:9px;
+    margin-top:10px;
+    background:#253459;
+    color:#d0dbff;
+    border:1px solid #344b80;
+    border-radius:6px;
+    cursor:pointer;
+}
+.reset-btn:hover{
+    background:#2e4270;
+}
+.kb-editor textarea{
+    width:100%;
+    min-height:80px;
+    margin:8px 0;
+}
+.kb-btn-row{
+    display:flex;
+    gap:8px;
+    margin:8px 0;
+}
+.preset-color-row{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+}
+.preset-color-btn{
+    width:32px;
+    height:32px;
+    border-radius:4px;
+    border:none;
+    cursor:pointer;
+}
+.chat-wrap{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+}
+.chat-container{
+    flex:1;
+    overflow-y:auto;
+    padding:24px;
+}
+.chat-container::-webkit-scrollbar{
+    width:6px;
+}
+.chat-container::-webkit-scrollbar-thumb{
+    background:#2d3349;
+    border-radius:3px;
+}
+.message{
+    max-width:85%;
+    margin-bottom:20px;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+}
+.user-message{
+    align-items:flex-end;
+    margin-left:auto;
+}
+.ai-message{
+    align-items:flex-start;
+    margin-right:auto;
+}
+.msg-box{
+    padding:14px 18px;
+    border-radius:12px;
+    line-height:1.6;
+    white-space:pre-wrap;
+    position:relative;
+}
+.user-message .msg-box{
+    background:var(--bg-chat-user);
+}
+.ai-message .msg-box{
+    background:var(--bg-chat-ai);
+    border:1px solid var(--border-color);
+}
+.msg-time{
+    font-size:11px;
+    color:#8892b0;
+    margin:4px 8px;
+}
+.msg-actions{
+    position:absolute;
+    top:6px;
+    right:8px;
+    display:none;
+    gap:6px;
+}
+.message:hover .msg-actions{
+    display:flex;
+}
+.msg-action-btn{
+    background:rgba(0,0,0,0.35);
+    border:none;
+    color:#d0dbff;
+    font-size:12px;
+    padding:3px 6px;
+    border-radius:4px;
+    cursor:pointer;
+}
+.input-wrap{
+    padding:16px 24px;
+    border-top:1px solid var(--border-color);
+    background:var(--bg-header);
+}
+.input-inner{
+    display:flex;
+    gap:12px;
+    align-items:flex-end;
+}
+textarea{
+    flex:1;
+    min-height:52px;
+    max-height:160px;
+    padding:14px;
+    border-radius:10px;
+    background:var(--bg-chat-ai);
+    border:1px solid var(--border-color);
+    color:var(--text-primary);
+    font-size:15px;
+    resize:none;
+    outline:none;
+}
+textarea:focus{
+    border-color:var(--accent);
+}
+#sendBtn{
+    height:52px;
+    padding:0 24px;
+    background:#346ed8;
+    color:white;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:500;
+}
+#sendBtn:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+}
+.loading-dot span{
+    animation:dot 1.4s infinite;
+    display:inline-block;
+}
+.loading-dot span:nth-child(2){animation-delay:0.2s}
+.loading-dot span:nth-child(3){animation-delay:0.4s}
+@keyframes dot{
+    0%,100%{opacity:0.2}
+    50%{opacity:1}
+}
+.modal-mask{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.7);
+    z-index:200;
+    display:none;
+    align-items:center;
+    justify-content:center;
+}
+.modal-mask.show{display:flex;}
+.modal-box{
+    background:var(--bg-panel);
+    border:1px solid var(--border-color);
+    border-radius:10px;
+    padding:24px;
+    width:min(600px,90vw);
+    max-height:80vh;
+    overflow-y:auto;
+}
+.modal-title{
+    font-size:18px;
+    color:var(--accent);
+    margin-bottom:16px;
+}
+.shortcut-item{
+    padding:8px 0;
+    border-bottom:1px solid #222738;
+    display:flex;
+    justify-content:space-between;
+}
+kbd{
+    background:#222738;
+    padding:2px 8px;
+    border-radius:4px;
+    font-family:Consolas;
+}
+@media (max-width:900px){
+    .boot-terminal-screen{
+        padding:20px;
+    }
+    .boot-boot-progress{
+        width:240px;
+    }
+    #particleCanvas{
+        width:260px;
+        height:260px;
+    }
+    .body-wrap{
+        flex-direction:column;
+    }
+    .control-panel{
+        width:100%;
+        height:auto;
+        max-height:420px;
+        border-right:none;
+        border-bottom:1px solid var(--border-color);
+    }
+    .panel-sphere-wrap{
+        height:120px;
+    }
+    #panelSphereCanvas{
+        width:100px;
+        height:100px;
+    }
+    .message{max-width:92%}
+    .chat-container{padding:16px}
+    .input-wrap{padding:12px 16px}
+    .header{
+        flex-direction:column;
+        gap:10px;
+        align-items:flex-start;
+    }
+}
+</style>
+</head>
+<body>
+<!-- 新增：前置AI代码启动终端动画层（最顶层优先加载） -->
+<div class="boot-terminal-screen" id="bootTermScreen">
+    <div class="boot-term-header">
+        AI Kernel Boot Loader v5.0 | 小龙离线智能体内核初始化
+    </div>
+    <div class="boot-term-log-wrap" id="bootLogWrap"></div>
+    <div class="boot-term-footer">
+        <button class="boot-skip-boot" id="skipBootBtn">跳过全部启动流程</button>
+        <div class="boot-boot-progress">
+            <div class="boot-boot-bar" id="bootProgressBar"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 原有启动介绍界面 -->
+<div class="intro-screen" id="introScreen">
+    <canvas id="particleCanvas"></canvas>
+    <div class="intro-inner">
+        <div class="intro-content" id="introText"></div>
+        <div class="load-progress">
+            <div class="load-progress-bar" id="loadBar"></div>
+        </div>
+        <button class="skip-btn" id="skipBtn">跳过启动流程</button>
+    </div>
+</div>
+<!-- 主交互界面 -->
+<div class="main-container" id="mainBox">
+    <div class="header">
+        <h1>【小龙AI交互系统5.0 代码动画增强完整版】</h1>
+        <div class="header-btn-group">
+            <button class="btn btn-clear" id="clearBtn">清空会话</button>
+            <button class="btn btn-export" id="exportChatBtn">导出对话</button>
+            <button class="btn btn-screenshot" id="screenShotBtn">粒子截图</button>
+        </div>
+    </div>
+    <div class="body-wrap">
+        <div class="control-panel">
+            <div class="panel-sphere-wrap">
+                <canvas id="panelSphereCanvas"></canvas>
+            </div>
+            <div class="panel-title">
+                <span class="dot"></span>
+                <h3>小龙系统控制面板</h3>
+            </div>
+            <!-- 1.粒子视觉调节 -->
+            <div class="control-block">
+                <h4>球体视觉调节</h4>
+                <div class="slider-wrap">
+                    <label>粒子大小 <span id="sizeVal">0.018</span></label>
+                    <input type="range" id="sizeSlider" min="0.010" max="0.035" step="0.001" value="0.018">
+                </div>
+                <div class="slider-wrap">
+                    <label>动画运行速度 <span id="animSpeedVal">1.00</span>x</label>
+                    <input type="range" id="animSpeedSlider" min="0.2" max="2.5" step="0.05" value="1.0">
+                </div>
+                <div class="control-item-row">
+                    <span>粒子颜色</span>
+                    <input type="color" id="colorPicker" value="#79a8ff">
+                </div>
+                <div class="preset-color-row">
+                    <button class="preset-color-btn" style="background:#79a8ff" data-color="#79a8ff"></button>
+                    <button class="preset-color-btn" style="background:#ff4fd8" data-color="#ff4fd8"></button>
+                    <button class="preset-color-btn" style="background:#48ffb3" data-color="#48ffb3"></button>
+                    <button class="preset-color-btn" style="background:#ffffff" data-color="#ffffff"></button>
+                </div>
+                <div class="switch-row">
+                    <span>开启脉动动画</span>
+                    <input type="checkbox" id="pulseSwitch" checked>
+                </div>
+                <div class="switch-row">
+                    <span>粒子景深模糊</span>
+                    <input type="checkbox" id="blurSwitch">
+                </div>
+            </div>
+            <!-- 2.交互速度&语音 -->
+            <div class="control-block">
+                <h4>交互与语音设置</h4>
+                <div class="slider-wrap">
+                    <label>AI响应打字速度 <span id="respSpeedVal">1.00</span>x</label>
+                    <input type="range" id="respSpeedSlider" min="0.3" max="3.0" step="0.05" value="1.0">
+                </div>
+                <div class="switch-row">
+                    <span>AI语音朗读回答</span>
+                    <input type="checkbox" id="voiceSwitch">
+                </div>
+                <div class="slider-wrap">
+                    <label>语音语速 <span id="voiceRateVal">1.00</span></label>
+                    <input type="range" id="voiceRateSlider" min="0.6" max="1.8" step="0.05" value="1.0">
+                </div>
+                <div class="switch-row">
+                    <span>打字音效</span>
+                    <input type="checkbox" id="soundSwitch">
+                </div>
+                <div class="slider-wrap">
+                    <label>回答随机权重 <span id="tempVal">0.30</span></label>
+                    <input type="range" id="tempSlider" min="0" max="1" step="0.05" value="0.3">
+                </div>
+                <button class="reset-btn" id="resetVisual">重置全部视觉参数</button>
+            </div>
+            <!-- 3.主题切换 -->
+            <div class="control-block">
+                <h4>界面主题</h4>
+                <div class="control-item-row">
+                    <span>当前主题</span>
+                    <select id="themeSelect">
+                        <option value="">默认深空</option>
+                        <option value="theme-sky">浅空蓝</option>
+                        <option value="theme-cyber">赛博粉</option>
+                        <option value="theme-mini">极简暗</option>
+                    </select>
+                </div>
+            </div>
+            <!-- 4.知识库可视化编辑 -->
+            <div class="control-block kb-editor">
+                <h4>本地知识库编辑</h4>
+                <div class="control-item-row">关键词（逗号分隔）</div>
+                <textarea id="kbKwInput" placeholder="你好,hello,hi"></textarea>
+                <div class="control-item-row">对应回答</div>
+                <textarea id="kbReplyInput" placeholder="你好，我是离线小龙AI"></textarea>
+                <div class="kb-btn-row">
+                    <button class="btn" id="kbAddBtn">添加问答</button>
+                    <button class="btn" id="kbExportJson">导出知识库</button>
+                    <button class="btn" id="kbImportJson">导入JSON</button>
+                </div>
+                <input type="file" id="kbFileInput" accept=".json" style="display:none">
+            </div>
+            <!-- 5.运行模式 -->
+            <div class="control-block">
+                <h4>运行模式</h4>
+                <div class="control-item">✅ 完全离线，无网络请求</div>
+                <div class="control-item">内置本地知识库引擎</div>
+                <div class="control-item">持久化会话存储(localStorage)</div>
+                <div class="control-item">支持持续上下文对话</div>
+            </div>
+            <!-- 6.快捷键提示 -->
+            <div class="control-block">
+                <h4>快捷操作</h4>
+                <button class="btn" id="showShortcutBtn">查看全部快捷键</button>
+            </div>
+        </div>
+        <!-- 聊天区域 -->
+        <div class="chat-wrap">
+            <div class="chat-container" id="chatBox"></div>
+            <div class="input-wrap">
+                <div class="input-inner">
+                    <textarea id="promptInput" placeholder="输入消息开始对话，完全离线运行｜Enter发送 Shift+Enter换行"></textarea>
+                    <button id="sendBtn">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- 快捷键弹窗 -->
+<div class="modal-mask" id="shortcutModal">
+    <div class="modal-box">
+        <div class="modal-title">全部快捷键</div>
+        <div class="shortcut-item"><span>发送消息</span><kbd>Enter</kbd></div>
+        <div class="shortcut-item"><span>输入框换行</span><kbd>Shift + Enter</kbd></div>
+        <div class="shortcut-item"><span>导出聊天记录</span><kbd>Ctrl + S</kbd></div>
+        <div class="shortcut-item"><span>清空对话</span><kbd>Ctrl + Delete</kbd></div>
+        <div class="shortcut-item"><span>粒子截图</span><kbd>Ctrl + P</kbd></div>
+        <button class="btn" style="margin-top:16px;width:100%" id="closeShortcut">关闭</button>
+    </div>
+</div>
+<!-- 隐藏文件导入input -->
+<input type="file" id="chatExportFile" style="display:none">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+window.THREE = THREE;
+// ===================== 新增：前置AI内核启动终端动画逻辑 =====================
+const bootTermScreen = document.getElementById('bootTermScreen');
+const bootLogWrap = document.getElementById('bootLogWrap');
+const bootProgressBar = document.getElementById('bootProgressBar');
+const skipBootBtn = document.getElementById('skipBootBtn');
+let bootSkipAll = false;
+// AI内核完整启动日志序列
+const bootLogList = [
+    {cls:"boot-log-info", text:"[SYSTEM] 初始化WebGL渲染上下文 | WebGL2.0 支持检测完成"},
+    {cls:"boot-log-load", text:"[LOAD] 加载 three.js 粒子渲染内核模块"},
+    {cls:"boot-log-task", text:"[TASK] 分配主线程渲染缓冲区 256MB"},
+    {cls:"boot-log-info", text:"[INFO] 创建几何体池、顶点缓存、着色器编译队列"},
+    {cls:"boot-log-success", text:"[OK] 粒子渲染引擎初始化完成"},
+    {cls:"boot-log-info", text:"[SYSTEM] 启动离线AI推理线程池（4工作线程）"},
+    {cls:"boot-log-task", text:"[TASK] 加载本地关键词匹配算法 core/match-engine.js"},
+    {cls:"boot-log-warn", text:"[WARN] 离线模式禁用远程API、云端模型请求通道"},
+    {cls:"boot-log-load", text:"[LOAD] 读取内置默认知识库向量规则"},
+    {cls:"boot-log-success", text:"[OK] AI问答推理引擎就绪"},
+    {cls:"boot-log-info", text:"[SYSTEM] 初始化本地持久化存储 localStorage适配器"},
+    {cls:"boot-log-task", text:"[TASK] 加载会话缓存、历史对话读取模块"},
+    {cls:"boot-log-success", text:"[OK] 对话持久化存储模块加载完毕"},
+    {cls:"boot-log-info", text:"[SYSTEM] 多媒体子系统初始化：Web Speech语音、Web Audio音效"},
+    {cls:"boot-log-task", text:"[TASK] 注册界面主题渲染、控制面板交互监听"},
+    {cls:"boot-log-success", text:"[OK] 全部功能模块自检通过"},
+    {cls:"boot-log-info", text:"[SYSTEM] 小龙AI交互系统5.0 内核启动完成，跳转欢迎界面..."},
+];
+// 逐行打印启动终端日志 + 进度条同步
+async function runBootTerminalAnimation(){
+    if(bootSkipAll) return;
+    const total = bootLogList.length;
+    for(let i=0; i<total; i++){
+        const logItem = bootLogList[i];
+        const lineDom = document.createElement('div');
+        lineDom.className = `boot-log-line ${logItem.cls}`;
+        lineDom.textContent = logItem.text;
+        bootLogWrap.appendChild(lineDom);
+        bootLogWrap.scrollTop = bootLogWrap.scrollHeight;
+        // 更新底部进度条
+        bootProgressBar.style.width = ((i+1)/total * 100).toFixed(1)+"%";
+        await new Promise(r=>setTimeout(r,42 / config.respSpeed));
+    }
+    await new Promise(r=>setTimeout(r,1200 / config.respSpeed));
+    // 终端淡出，进入原有介绍界面
+    bootTermScreen.classList.add("fade-out");
+    setTimeout(()=>{
+        bootTermScreen.style.display = "none";
+        // 执行原有粒子+文字动画
+        typeIntro();
+    },1000);
+}
+// 跳过全部启动
+skipBootBtn.onclick = ()=>{
+    bootSkipAll = true;
+    bootTermScreen.classList.add("fade-out");
+    setTimeout(()=>{
+        bootTermScreen.style.display = "none";
+        skipAll = true;
+        introScreen.classList.add("fade-out");
+        setTimeout(()=>{
+            introScreen.style.display = "none";
+            mainBox.style.display = "flex";
+            setTimeout(()=>initPanelSphere(),200);
+            bindControlPanel();
+            bindAllExtraFunc();
+            loadStorage();
+        },400);
+    },400);
+};
+
+// ===================== 原有全局变量与初始化逻辑 =====================
+const introScreen = document.getElementById('introScreen');
+const introText = document.getElementById('introText');
+const skipBtn = document.getElementById('skipBtn');
+const mainBox = document.getElementById('mainBox');
+const loadBar = document.getElementById('loadBar');
+// 全局配置
+const config = {
+    particleSize: 0.018,
+    animSpeed: 1.0,
+    respSpeed: 1.0,
+    voiceRate:1.0,
+    particleColor: 0x79a8ff,
+    enablePulse: true,
+    enableBlur:false,
+    enableVoice:false,
+    enableSound:false,
+    temperature:0.3
+};
+let skipAll = false;
+let messageHistory = [];
+let localKnowledgeBase = [];
+// 新增：系统工作状态标记
+let systemWorking = false;
+// 加载本地存储知识库与会话
+function loadStorage(){
+    const saveKb = localStorage.getItem('xiaolong_kb');
+    if(saveKb) localKnowledgeBase = JSON.parse(saveKb);
+    const saveChat = localStorage.getItem('xiaolong_chat');
+    if(saveChat) messageHistory = JSON.parse(saveChat);
+    messageHistory.forEach(item=>{
+        addMessage(item.content, item.role==='user', false, item.time)
+    })
+}
+function saveKbToStorage(){
+    localStorage.setItem('xiaolong_kb', JSON.stringify(localKnowledgeBase));
+}
+function saveChatToStorage(){
+    localStorage.setItem('xiaolong_chat', JSON.stringify(messageHistory));
+}
+// 默认内置知识库
+const defaultKB = [
+    {keywords:["你好","hi","hello"], reply:"你好！我是本地离线AI系统小龙，全程不需要联网，有什么可以帮助你的？"},
+    {keywords:["介绍一下你自己","你是谁"], reply:"我是一套完全离线运行的网页AI交互程序，内置粒子可视化界面，所有问答运行在本地浏览器，不会上传任何数据。"},
+    {keywords:["怎么扩充知识库","添加问答"], reply:"找到侧边栏知识库编辑区域，输入关键词和回答，点击添加问答即可永久保存。"},
+    {keywords:["功能","能力"], reply:"我支持离线关键词问答、连续上下文对话、动态粒子可视化界面、语音朗读、知识库自定义导出导入。"},
+    {keywords:["帮助","使用方法"], reply:"直接在底部输入框发送消息；Enter发送，Shift+Enter换行；左侧面板可以调节粒子动画样式、语音、主题。"},
+    {keywords:["代码","编程"], reply:"我支持基础代码相关问答，你可以描述想要实现的功能，我会给出参考代码。"},
+    {keywords:["天气"], reply:"离线模式无法获取实时天气数据，联网版本才可以调用天气接口。"},
+    {keywords:["帮我生成一个mc启动器","生成mc启动器","帮我生成mc启动器"], reply:"我无法主动获取mc相关资源，你可以访问开发者开源仓库查看：https://github.com/qw303455。"},
+    {keywords:["需要"], reply:"仓库地址：https://github.com/qw303455，内含相关启动器源码。"},
+];
+// 初始化知识库
+if(!localStorage.getItem('xiaolong_kb')){
+    localKnowledgeBase = [...defaultKB];
+    saveKbToStorage();
+}
+// 启动介绍文本
+const introContent = `喵ヾ(≧▽≦*)o你好，欢迎使用小龙AI交互系统5.0完整版。
+✅ 运行模式：纯本地离线，零网络请求
+• 动态粒子球体可视化界面
+• 后台多线程系统工作调度，CPU/内存资源自动分配
+• 上下文连续对话记忆
+• 可视化自定义本地知识库
+• 会话持久化存储、导出导入
+• 语音朗读、打字音效、多套主题
+使用提示：
+所有数据保存在浏览器本地，不会上传网络
+系统后台正在启动工作任务，加载渲染、存储、问答核心模块
+准备完成，即将进入交互界面...`;
+// 触发动画文字索引
+const triggerCodeIndex = introContent.indexOf("动态粒子");
+const triggerStorageIndex = introContent.indexOf("持久化存储");
+const triggerKBIndex = introContent.indexOf("自定义本地知识库");
+const triggerWorkIndex = introContent.indexOf("系统后台正在启动工作任务");
+// ===================== 分阶段代码执行动画 =====================
+async function runCodeTerminalAnimation(posLeft, posTop, logList){
+    if(skipAll) return;
+    const term = document.createElement('div');
+    term.className = "term-popup";
+    term.style.left = posLeft;
+    term.style.top = posTop;
+    introScreen.appendChild(term);
+    term.classList.add("show");
+    let html = "";
+    for(let log of logList){
+        let cls = "log-load";
+        if(log.type === "INFO") cls = "log-info";
+        if(log.type === "WARN") cls = "log-warn";
+        if(log.type === "OK") cls = "log-ok";
+        if(log.type === "TASK") cls = "log-task";
+        html += `<div class="term-line ${cls}">[${log.type}] ${log.text}</div>`;
+        term.innerHTML = html;
+        await new Promise(r=>setTimeout(r,300 / config.respSpeed));
+    }
+    await new Promise(r=>setTimeout(r,1200 / config.respSpeed));
+    term.classList.remove("show");
+    setTimeout(()=>term.remove(),300);
+}
+// 系统后台工作任务动画
+async function runSystemWorkAnimation(){
+    systemWorking = true;
+    const cpuTaskLog = [
+        {type:"TASK", text:"初始化任务调度器 worker-core.js"},
+        {type:"TASK", text:"分配主线程渲染资源 60%占用"},
+        {type:"TASK", text:"分配子线程知识库解析 30%占用"},
+        {type:"INFO", text:"后台工作队列就绪，等待执行指令"},
+        {type:"OK", text:"多线程工作调度模块加载完成"}
+    ];
+    runCodeTerminalAnimation("5%", "30%", cpuTaskLog);
+    setTimeout(()=>popFileAnimation("worker-core.js"),200);
+    setTimeout(()=>popFileAnimation("task-scheduler.js"),600);
+    setTimeout(async ()=>{
+        const memLog = [
+            {type:"TASK", text:"分配本地会话缓存内存池 128MB"},
+            {type:"TASK", text:"创建粒子几何体缓冲区"},
+            {type:"WARN", text:"离线模式禁用远程内存共享"},
+            {type:"OK", text:"内存资源分配工作完成"}
+        ];
+        await runCodeTerminalAnimation("70%", "40%", memLog);
+        popFileAnimation("memory-buffer.js");
+    },1200 / config.respSpeed);
+    setTimeout(async ()=>{
+        const aiWorkLog = [
+            {type:"TASK", text:"启动离线关键词匹配工作线程"},
+            {type:"TASK", text:"预加载默认知识库规则数组"},
+            {type:"INFO", text:"上下文记忆工作通道开启"},
+            {type:"OK", text:"AI问答后台工作模块就绪"}
+        ];
+        await runCodeTerminalAnimation("25%", "70%", aiWorkLog);
+        popFileAnimation("ai-worker.js");
+    },2400 / config.respSpeed);
+    setTimeout(()=>{
+        systemWorking = false;
+    },3000 / config.respSpeed);
+}
+// 粒子渲染引擎初始化动画
+async function runParticleRenderCode(){
+    const logArr = [
+        {type:"LOAD", text:"three.module.js 渲染模块加载"},
+        {type:"INFO", text:"初始化WebGL画布上下文"},
+        {type:"INFO", text:"创建球体几何体与粒子材质"},
+        {type:"OK", text:"粒子渲染引擎初始化完成"}
+    ];
+    await runCodeTerminalAnimation("10%", "15%", logArr);
+}
+// 本地存储持久化模块动画
+async function runStorageCode(){
+    const logArr = [
+        {type:"LOAD", text:"localStorage 存储适配器加载"},
+        {type:"INFO", text:"读取本地对话缓存记录"},
+        {type:"INFO", text:"读取自定义知识库配置"},
+        {type:"OK", text:"持久化会话模块就绪"}
+    ];
+    await runCodeTerminalAnimation("65%", "22%", logArr);
+}
+// 离线知识库引擎加载动画
+async function runKnowledgeBaseCode(){
+    const logArr = [
+        {type:"LOAD", text:"local_knowledge.json 解析器加载"},
+        {type:"INFO", text:"关键词匹配算法编译"},
+        {type:"WARN", text:"离线模式禁用网络接口"},
+        {type:"OK", text:"本地问答引擎加载完毕"}
+    ];
+    await runCodeTerminalAnimation("20%", "60%", logArr);
+}
+// 文件弹出动画
+function popFileAnimation(filename){
+    if(skipAll) return;
+    const tip = document.createElement('div');
+    tip.className = "file-popup";
+    tip.innerText = `[LOAD] ${filename}`;
+    const x = 60 + Math.random() * (window.innerWidth * 0.7);
+    const y = 80 + Math.random() * (window.innerHeight * 0.5);
+    tip.style.left = x+"px";
+    tip.style.top = y+"px";
+    introScreen.appendChild(tip);
+    setTimeout(()=>tip.classList.add("show"),50);
+    setTimeout(()=>{
+        tip.classList.remove("show");
+        setTimeout(()=>tip.remove(),300);
+    },1300 / config.respSpeed);
+}
+// 逐字打印介绍文本
+async function typeIntro(){
+    let str = "";
+    let codeTriggered = false;
+    let storageTriggered = false;
+    let kbTriggered = false;
+    let workTriggered = false;
+    const totalLen = introContent.length;
+    for(let i=0; i<totalLen; i++){
+        if(skipAll) break;
+        const char = introContent[i];
+        str += char;
+        introText.textContent = str;
+        loadBar.style.width = ((i+1)/totalLen * 100).toFixed(1)+"%";
+        if(!workTriggered && i >= triggerWorkIndex){
+            workTriggered = true;
+            runSystemWorkAnimation();
+        }
+        if(!codeTriggered && i >= triggerCodeIndex){
+            codeTriggered = true;
+            runParticleRenderCode();
+            setTimeout(()=>popFileAnimation("render/sphere-core.js"),300);
+            setTimeout(()=>popFileAnimation("render/shader.bin"),700);
+        }
+        if(!storageTriggered && i >= triggerStorageIndex){
+            storageTriggered = true;
+            setTimeout(()=>runStorageCode(),200);
+            setTimeout(()=>popFileAnimation("storage/cache.js"),400);
+        }
+        if(!kbTriggered && i >= triggerKBIndex){
+            kbTriggered = true;
+            setTimeout(()=>runKnowledgeBaseCode(),300);
+            setTimeout(()=>popFileAnimation("local_knowledge.json"),500);
+        }
+        await new Promise(r=>setTimeout(r,38 / config.respSpeed));
+    }
+    if(!skipAll){
+        setTimeout(switchToMain,1600 / config.respSpeed);
+    }
+}
+// 切换到主界面
+function switchToMain(){
+    introScreen.classList.add('fade-out');
+    setTimeout(()=>{
+        introScreen.style.display = "none";
+        mainBox.style.display = "flex";
+        setTimeout(()=>initPanelSphere(),300);
+        bindControlPanel();
+        bindAllExtraFunc();
+        loadStorage();
+    },1000);
+}
+// 跳过按钮
+skipBtn.onclick = ()=>{
+    skipAll = true;
+    introScreen.classList.add("fade-out");
+    setTimeout(()=>{
+        introScreen.style.display = "none";
+        mainBox.style.display = "flex";
+        setTimeout(()=>initPanelSphere(),200);
+        bindControlPanel();
+        bindAllExtraFunc();
+        loadStorage();
+    },400);
+};
+// ===================== 粒子渲染逻辑 =====================
+let scene, camera, renderer, points, positions, originalPositions;
+let aiIsSpeaking = false;
+let retractProgress = 1;
+let time = 0;
+const canvas = document.getElementById('particleCanvas');
+function resizeCanvas(targetCanvas, width, height){
+    targetCanvas.width = width;
+    targetCanvas.height = height;
+}
+function initParticleSphere(){
+    resizeCanvas(canvas, 360, 360);
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(60, canvas.width / canvas.height, 0.1, 1000);
+    camera.position.z = 3.8;
+    renderer = new THREE.WebGLRenderer({canvas, alpha:true, antialias:true, preserveDrawingBuffer:true});
+    renderer.setSize(canvas.width, canvas.height, false);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    const geo = new THREE.SphereGeometry(0.85, 64, 64);
+    positions = geo.attributes.position.array;
+    originalPositions = new Float32Array(positions);
+    const mat = new THREE.PointsMaterial({
+        color:config.particleColor,
+        size:config.particleSize,
+        transparent:true,
+        opacity:0.7
+    });
+    points = new THREE.Points(geo, mat);
+    scene.add(points);
+}
+function animateParticles(){
+    requestAnimationFrame(animateParticles);
+    const dt = 0.016 * config.animSpeed;
+    time += dt;
+    points.rotation.y += 0.003 * config.animSpeed;
+    const targetProgress = aiIsSpeaking ? 1 : 0;
+    retractProgress += (targetProgress - retractProgress) * 0.025;
+    const speakScaleAmp = 0.07 * retractProgress;
+    const speakWobbleAmp = 0.10 * retractProgress;
+    const speakNoiseFactor = 0.15 * retractProgress;
+    let workPulse = 0;
+    if(systemWorking){
+        workPulse = Math.sin(time * 10) * 0.12;
+    }
+    const sidePush = 1 + Math.sin(time * (aiIsSpeaking ? 5 : 1.2)) * speakScaleAmp + workPulse;
+    const centerSqueeze = 1 - Math.sin(time * (aiIsSpeaking ? 5 : 1.2)) * speakScaleAmp * 0.45 - workPulse * 0.5;
+    points.scale.set(sidePush, centerSqueeze, centerSqueeze);
+    for(let i=0;i<positions.length;i+=3){
+        const ox = originalPositions[i];
+        const oy = originalPositions[i+1];
+        const oz = originalPositions[i+2];
+        const distance = Math.sqrt(ox*ox + oy*oy + oz*oz);
+        const pushSide = Math.sin(time * 3 + ox * 2.5) * speakNoiseFactor;
+        const pushCenter = Math.sin(time * 3 + oy * 2.5) * speakNoiseFactor * 0.35;
+        const wobble = config.enablePulse ? Math.sin(time * (aiIsSpeaking ? 8 : 2)) * speakWobbleAmp : 0;
+        const workWave = systemWorking ? Math.sin(time * 8 + distance * 6) * 0.06 : 0;
+        positions[i] = ox + pushSide + wobble * (ox / distance) + workWave;
+        positions[i+1] = oy + pushCenter + wobble * (oy / distance) + workWave * 0.4;
+        positions[i+2] = oz + pushCenter + wobble * (oz / distance) + workWave * 0.4;
+    }
+    points.material.size = config.particleSize;
+    points.material.color.setHex(config.particleColor);
+    points.geometry.attributes.position.needsUpdate = true;
+    renderer.render(scene,camera);
+}
+// 侧边小粒子面板
+let panelScene, panelCam, panelRender, panelPoints, panelPos, panelOriginPos;
+let panelTime = 0;
+let panelInited = false;
+let isThinking = false;
+let thinkingProgress = 0;
+const panelCanvas = document.getElementById('panelSphereCanvas');
+function initPanelSphere(){
+    if(panelInited) return;
+    resizeCanvas(panelCanvas,140,140);
+    panelScene = new THREE.Scene();
+    panelCam = new THREE.PerspectiveCamera(60, panelCanvas.width / panelCanvas.height, 0.1, 20);
+    panelCam.position.z = 2.6;
+    panelRender = new THREE.WebGLRenderer({canvas:panelCanvas, alpha:true, antialias:true, preserveDrawingBuffer:true});
+    panelRender.setSize(panelCanvas.width, panelCanvas.height, false);
+    panelRender.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    const geo = new THREE.SphereGeometry(0.52, 48, 48);
+    panelPos = geo.attributes.position.array;
+    panelOriginPos = new Float32Array(panelPos);
+    const mat = new THREE.PointsMaterial({
+        color:config.particleColor,
+        size:config.particleSize,
+        transparent:true,
+        opacity:0.65
+    });
+    panelPoints = new THREE.Points(geo, mat);
+    panelScene.add(panelPoints);
+    panelInited = true;
+    animatePanelSphere();
+}
+function animatePanelSphere(){
+    requestAnimationFrame(animatePanelSphere);
+    if(!panelInited) return;
+    const dt = 0.016 * config.animSpeed;
+    panelTime += dt;
+    const targetThinking = isThinking ? 1 : 0;
+    thinkingProgress += (targetThinking - thinkingProgress) * 0.035;
+    let workSpeed = systemWorking ? 0.006 : 0;
+    panelPoints.rotation.y += (0.0022 + thinkingProgress * 0.008 + workSpeed) * config.animSpeed;
+    panelPoints.rotation.x = Math.sin(panelTime * 0.6) * 0.05 * (1 - thinkingProgress);
+    for(let i=0;i<panelPos.length;i+=3){
+        const ox = panelOriginPos[i];
+        const oy = panelOriginPos[i+1];
+        const oz = panelOriginPos[i+2];
+        const distance = Math.sqrt(ox*ox + oy*oy + oz*oz);
+        const normalX = ox / distance;
+        const normalY = oy / distance;
+        const normalZ = oz / distance;
+        const idleNoise = Math.sin(panelTime * 2.4 + ox * 3.2) * 0.025;
+        const angle = panelTime * 2.5 + distance * 10;
+        const thinkOrbit = Math.sin(angle) * 0.08 * thinkingProgress;
+        const thinkPull = -0.06 * thinkingProgress;
+        const pulse = config.enablePulse ? Math.sin(panelTime * 6) * 0.04 * thinkingProgress : 0;
+        const panelWorkWave = systemWorking ? Math.sin(panelTime * 12 + distance * 4) * 0.04 : 0;
+        panelPos[i] = ox + idleNoise + thinkOrbit * normalX + thinkPull * normalX + pulse * normalX + panelWorkWave;
+        panelPos[i+1] = oy + idleNoise + thinkOrbit * normalY + thinkPull * normalY + pulse * normalY + panelWorkWave * 0.6;
+        panelPos[i+2] = oz + idleNoise + thinkOrbit * normalZ + thinkPull * normalZ + pulse * normalZ + panelWorkWave * 0.6;
+    }
+    panelPoints.material.size = config.particleSize;
+    panelPoints.material.color.setHex(config.particleColor);
+    panelPoints.geometry.attributes.position.needsUpdate = true;
+    panelRender.render(panelScene, panelCam);
+}
+function startThinking(){isThinking = true;}
+function stopThinking(){isThinking = false;}
+// 控制面板绑定
+function bindControlPanel(){
+    const sizeSlider = document.getElementById('sizeSlider');
+    const sizeVal = document.getElementById('sizeVal');
+    const animSpeedSlider = document.getElementById('animSpeedSlider');
+    const animSpeedVal = document.getElementById('animSpeedVal');
+    const respSpeedSlider = document.getElementById('respSpeedSlider');
+    const respSpeedVal = document.getElementById('respSpeedVal');
+    const colorPicker = document.getElementById('colorPicker');
+    const pulseSwitch = document.getElementById('pulseSwitch');
+    const blurSwitch = document.getElementById('blurSwitch');
+    const resetBtn = document.getElementById('resetVisual');
+    const voiceSwitch = document.getElementById('voiceSwitch');
+    const voiceRateSlider = document.getElementById('voiceRateSlider');
+    const voiceRateVal = document.getElementById('voiceRateVal');
+    const soundSwitch = document.getElementById('soundSwitch');
+    const tempSlider = document.getElementById('tempSlider');
+    const tempVal = document.getElementById('tempVal');
+    const themeSelect = document.getElementById('themeSelect');
+    sizeSlider.addEventListener('input',()=>{
+        config.particleSize = parseFloat(sizeSlider.value);
+        sizeVal.textContent = config.particleSize.toFixed(3);
+    });
+    animSpeedSlider.addEventListener('input',()=>{
+        config.animSpeed = parseFloat(animSpeedSlider.value);
+        animSpeedVal.textContent = config.animSpeed.toFixed(2);
+    });
+    respSpeedSlider.addEventListener('input',()=>{
+        config.respSpeed = parseFloat(respSpeedSlider.value);
+        respSpeedVal.textContent = config.respSpeed.toFixed(2);
+    });
+    colorPicker.addEventListener('input',()=>{
+        const hex = colorPicker.value.replace("#","0x");
+        config.particleColor = parseInt(hex);
+    });
+    document.querySelectorAll('.preset-color-btn').forEach(btn=>{
+        btn.onclick = ()=>{
+            const c = btn.dataset.color;
+            colorPicker.value = c;
+            config.particleColor = parseInt(c.replace("#","0x"));
+        }
+    })
+    pulseSwitch.addEventListener('change',()=>{
+        config.enablePulse = pulseSwitch.checked;
+    });
+    blurSwitch.onchange = ()=> config.enableBlur = blurSwitch.checked;
+    voiceSwitch.onchange = ()=> config.enableVoice = voiceSwitch.checked;
+    voiceRateSlider.oninput = ()=>{
+        config.voiceRate = parseFloat(voiceRateSlider.value);
+        voiceRateVal.textContent = config.voiceRate.toFixed(2);
+    }
+    soundSwitch.onchange = ()=> config.enableSound = soundSwitch.checked;
+    tempSlider.oninput = ()=>{
+        config.temperature = parseFloat(tempSlider.value);
+        tempVal.textContent = config.temperature.toFixed(2);
+    }
+    themeSelect.onchange = ()=>{
+        document.body.className = themeSelect.value;
+        localStorage.setItem('xiaolong_theme', themeSelect.value);
+    }
+    resetBtn.addEventListener('click',()=>{
+        config.particleSize = 0.018;
+        config.animSpeed = 1.0;
+        config.respSpeed = 1.0;
+        config.particleColor = 0x79a8ff;
+        config.enablePulse = true;
+        config.enableBlur = false;
+        sizeSlider.value = 0.018;
+        sizeVal.textContent = "0.018";
+        animSpeedSlider.value = 1.0;
+        animSpeedVal.textContent = "1.00";
+        respSpeedSlider.value = 1.0;
+        respSpeedVal.textContent = "1.00";
+        colorPicker.value = "#79a8ff";
+        pulseSwitch.checked = true;
+        blurSwitch.checked = false;
+    });
+    const saveTheme = localStorage.getItem('xiaolong_theme');
+    if(saveTheme){
+        themeSelect.value = saveTheme;
+        document.body.className = saveTheme;
+    }
+}
+// 聊天容器
+const chatBox = document.getElementById('chatBox');
+const promptInput = document.getElementById('promptInput');
+const sendBtn = document.getElementById('sendBtn');
+const clearBtn = document.getElementById('clearBtn');
+function getTimeStr(){
+    const d = new Date();
+    return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
+}
+function scrollBottom(){
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+function addMessage(text,isUser,save=true,time=getTimeStr()){
+    const wrap = document.createElement('div');
+    wrap.className = `message ${isUser?'user-message':'ai-message'}`;
+    const box = document.createElement('div');
+    box.className = 'msg-box';
+    box.textContent = text;
+    const timeDom = document.createElement('div');
+    timeDom.className = 'msg-time';
+    timeDom.innerText = time;
+    const actionWrap = document.createElement('div');
+    actionWrap.className = 'msg-actions';
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'msg-action-btn';
+    copyBtn.innerText = '复制';
+    copyBtn.onclick = async ()=> await navigator.clipboard.writeText(text);
+    const delBtn = document.createElement('button');
+    delBtn.className = 'msg-action-btn';
+    delBtn.innerText = '删除';
+    delBtn.onclick = ()=>{
+        wrap.remove();
+        messageHistory = messageHistory.filter(m=>!(m.content===text && m.time===time));
+        saveChatToStorage();
+    }
+    actionWrap.append(copyBtn, delBtn);
+    wrap.append(box, timeDom, actionWrap);
+    chatBox.appendChild(wrap);
+    scrollBottom();
+    if(save){
+        messageHistory.push({role:isUser?'user':'assistant', content:text, time});
+        saveChatToStorage();
+    }
+}
+function createAiStreamBox(){
+    const wrap = document.createElement('div');
+    wrap.className = 'message ai-message';
+    const box = document.createElement('div');
+    box.className = 'msg-box';
+    wrap.appendChild(box);
+    chatBox.appendChild(wrap);
+    scrollBottom();
+    return {dom:box, wrap};
+}
+function matchLocalAnswer(inputText){
+    const text = inputText.toLowerCase();
+    let bestScore = 0;
+    let bestList = [];
+    for(let item of localKnowledgeBase){
+        let score = 0;
+        for(let kw of item.keywords){
+            if(text.includes(kw.toLowerCase())) score += 1;
+        }
+        if(score > bestScore){
+            bestScore = score;
+            bestList = [item.reply];
+        }else if(score === bestScore && bestScore>0){
+            bestList.push(item.reply);
+        }
+    }
+    if(bestList.length === 0){
+        const defaultReplies = [
+            "我暂时没有理解这个问题，你可以换一种说法，或者把内容补充完整。",
+            "这条问题不在本地知识库中，你可以编辑侧边栏知识库扩充问答库。",
+            "请重新描述你的需求，我会尽力为你解答。",
+            "当前离线运行，无法访问互联网信息，请询问知识库内相关内容。"
+        ];
+        return defaultReplies[Math.floor(Math.random()*defaultReplies.length)];
+    }
+    if(config.temperature < 0.05) return bestList[0];
+    const r = Math.random() * config.temperature;
+    const idx = Math.min(Math.floor(r * bestList.length), bestList.length-1);
+    return bestList[idx];
+}
+function voiceRead(text){
+    if(!config.enableVoice || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = config.voiceRate;
+    window.speechSynthesis.speak(utter);
+}
+function playTypeSound(){
+    if(!config.enableSound) return;
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 800;
+    gain.gain.value = 0.015;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.008);
+}
+async function getLocalReply(userMsg){
+    startThinking();
+    await new Promise(r=>setTimeout(r,400 + Math.random()*500));
+    stopThinking();
+    aiIsSpeaking = true;
+    const answer = matchLocalAnswer(userMsg);
+    return answer;
+}
+async function aiReply(userText){
+    sendBtn.disabled = true;
+    const {dom, wrap} = createAiStreamBox();
+    dom.innerHTML = `<div class="loading-dot"><span>.</span><span>.</span><span>.</span></div>`;
+    const fullText = await getLocalReply(userText);
+    dom.innerText = "";
+    for(let char of fullText){
+        dom.textContent += char;
+        scrollBottom();
+        playTypeSound();
+        await new Promise(r=>setTimeout(r,28 / config.respSpeed));
+    }
+    voiceRead(fullText);
+    const time = getTimeStr();
+    const timeDom = document.createElement('div');
+    timeDom.className = 'msg-time';
+    timeDom.innerText = time;
+    const actionWrap = document.createElement('div');
+    actionWrap.className = 'msg-actions';
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'msg-action-btn';
+    copyBtn.innerText = '复制';
+    copyBtn.onclick = async ()=> await navigator.clipboard.writeText(fullText);
+    const delBtn = document.createElement('button');
+    delBtn.className = 'msg-action-btn';
+    delBtn.innerText = '删除';
+    delBtn.onclick = ()=>{
+        wrap.remove();
+        messageHistory = messageHistory.filter(m=>!(m.content===fullText && m.time===time));
+        saveChatToStorage();
+    }
+    actionWrap.append(copyBtn, delBtn);
+    wrap.append(timeDom, actionWrap);
+    messageHistory.push({role:"assistant",content:fullText, time});
+    saveChatToStorage();
+    aiIsSpeaking = false;
+    sendBtn.disabled = false;
+}
+async function handleSend(){
+    const text = promptInput.value.trim();
+    if(!text || sendBtn.disabled) return;
+    promptInput.value = "";
+    addMessage(text,true);
+    await aiReply(text);
+}
+sendBtn.onclick = handleSend;
+promptInput.onkeydown = e=>{
+    if(e.key==='Enter'&&!e.shiftKey){
+        e.preventDefault();
+        handleSend();
+    }
+}
+clearBtn.onclick = ()=>{
+    chatBox.innerHTML="";
+    messageHistory = [];
+    localStorage.removeItem('xiaolong_chat');
+}
+function bindAllExtraFunc(){
+    const kbKwInput = document.getElementById('kbKwInput');
+    const kbReplyInput = document.getElementById('kbReplyInput');
+    const kbAddBtn = document.getElementById('kbAddBtn');
+    kbAddBtn.onclick = ()=>{
+        const kwStr = kbKwInput.value.trim();
+        const repStr = kbReplyInput.value.trim();
+        if(!kwStr || !repStr) return alert('关键词和回答不能为空');
+        const kwArr = kwStr.split(',').map(s=>s.trim()).filter(s=>s);
+        localKnowledgeBase.push({keywords:kwArr, reply:repStr});
+        saveKbToStorage();
+        kbKwInput.value = "";
+        kbReplyInput.value = "";
+        alert('问答添加成功，永久保存至本地');
+    }
+    document.getElementById('kbExportJson').onclick = ()=>{
+        const blob = new Blob([JSON.stringify(localKnowledgeBase,null,2)], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "小龙离线知识库.json";
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+    const kbFileInput = document.getElementById('kbFileInput');
+    document.getElementById('kbImportJson').onclick = ()=> kbFileInput.click();
+    kbFileInput.onchange = (e)=>{
+        const f = e.target.files[0];
+        if(!f) return;
+        const reader = new FileReader();
+        reader.onload = ev=>{
+            try{
+                const data = JSON.parse(ev.target.result);
+                if(Array.isArray(data)){
+                    localKnowledgeBase = [...data];
+                    saveKbToStorage();
+                    alert('知识库导入成功');
+                }
+            }catch(err){
+                alert('JSON文件格式错误');
+            }
+        }
+        reader.readAsText(f);
+    }
+    document.getElementById('exportChatBtn').onclick = ()=>{
+        let txt = "小龙AI离线对话记录\n";
+        messageHistory.forEach(m=>{
+            txt += `[${m.time}] ${m.role==='user'?'用户':'AI'}：${m.content}\n\n`
+        })
+        const blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "小龙对话记录.txt";
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+    document.getElementById('screenShotBtn').onclick = ()=>{
+        const link = document.createElement('a');
+        link.download = "小龙粒子球体.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+    }
+    const shortcutModal = document.getElementById('shortcutModal');
+    document.getElementById('showShortcutBtn').onclick = ()=> shortcutModal.classList.add('show');
+    document.getElementById('closeShortcut').onclick = ()=> shortcutModal.classList.remove('show');
+    shortcutModal.onclick = e=>{
+        if(e.target === shortcutModal) shortcutModal.classList.remove('show');
+    }
+    window.onkeydown = e=>{
+        if(e.ctrlKey && e.key.toLowerCase()==='s'){
+            e.preventDefault();
+            document.getElementById('exportChatBtn').click();
+        }
+        if(e.ctrlKey && e.key.toLowerCase()==='p'){
+            e.preventDefault();
+            document.getElementById('screenShotBtn').click();
+        }
+        if(e.ctrlKey && e.key==='Delete'){
+            e.preventDefault();
+            clearBtn.click();
+        }
+    }
+}
+// 页面加载完整启动入口（修复核心：补充缺失执行逻辑）
+window.addEventListener("load",async ()=>{
+    initParticleSphere();
+    animateParticles();
+    // 优先执行前置AI内核启动终端动画
+    await runBootTerminalAnimation();
+});
+</script>
+</body>
+</html>
